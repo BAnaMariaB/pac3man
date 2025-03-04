@@ -18,6 +18,9 @@ Pacman agents (in searchAgents.py).
 """
 
 import util
+from util import Stack
+from util import Queue
+from util import PriorityQueue
 
 class SearchProblem:
     """
@@ -81,23 +84,115 @@ def depthFirstSearch(problem):
 
     To get started, you might want to try some of these simple commands to
     understand the search problem that is being passed in:
+"""
+    #print("Start:", problem.getStartState())
+    #print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
+    #print("Start's successors:", problem.getSuccessors(problem.getStartState()))
+    
+    stack_xy = Stack()
+    visited = []
+    path = []
+    
+    if problem.isGoalState(problem.getStartState()):
+        return []
+    
+    stack_xy.push((problem.getStartState(),[]))
+    
+    while(True):
+        if stack_xy.isEmpty():
+            return []
+        
+        xy, path = stack_xy.pop()
+        visited.append(xy)
+        
+        if problem.isGoalState(xy):
+            return path
+        
+        successor = problem.getSuccessors(xy)
+        if successor:
+            for i in successor:
+                if i[0] not in visited:
+                    newPath = path + [i[1]]
+                    stack_xy.push((i[0], newPath))
 
-    print("Start:", problem.getStartState())
-    print("Is the start a goal?", problem.isGoalState(problem.getStartState()))
-    print("Start's successors:", problem.getSuccessors(problem.getStartState()))
-    """
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
 
 def breadthFirstSearch(problem):
     """Search the shallowest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    
+    que_xy = Queue()
+    visited = []
+    path = []
+    
+    if problem.isGoalState(problem.getStartState()):
+        return []
+    
+    que_xy.push((problem.getStartState(),[]))
+    
+    while(True):
+        if que_xy.isEmpty():
+            return []
+        
+        xy, path = que_xy.pop()
+        visited.append(xy)
+        
+        if problem.isGoalState(xy):
+            return path
+        
+        successor = problem.getSuccessors(xy)
+        
+        if successor : 
+            for i in successor:
+                if i[0] not in visited and i[0] not in(state[0] for state in que_xy.list):
+                    newPath = path +[i[1]]
+                    que_xy.push((i[0],newPath))
+        
+        
 
 def uniformCostSearch(problem):
     """Search the node of least total cost first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+
+    que_xy = PriorityQueue()
+    visited = [] 
+    path = [] 
+
+    if problem.isGoalState(problem.getStartState()):
+        return []
+
+    que_xy.push((problem.getStartState(),[]),0)
+
+    while(True):
+        if que_xy.isEmpty():
+            return []
+
+        xy,path = que_xy.pop() 
+        visited.append(xy)
+
+        if problem.isGoalState(xy):
+            return path
+
+        successor = problem.getSuccessors(xy)
+
+        if successor:
+            for i in successor:
+                if i[0] not in visited and (i[0] not in (state[2][0] for state in que_xy.heap)):
+
+                    new_Path = path + [i[1]]
+                    priority = problem.getCostOfActions(new_Path)
+
+                    que_xy.push((i[0],new_Path),priority)
+
+                elif i[0] not in visited and (i[0] in (state[2][0] for state in que_xy.heap)):
+                    
+                    for state in que_xy.heap:
+                        if state[2][0] == i[0]:
+                            old_Priorirty = problem.getCostOfActions(state[2][1])
+
+                    new_Priority = problem.getCostOfActions(path + [i[1]])
+                    
+                    if old_Priorirty > new_Priority:
+                        new_Path = path + [i[1]]
+                        que_xy.update((i[0],new_Path),new_Priority)
+
 
 def nullHeuristic(state, problem=None):
     """
@@ -108,8 +203,62 @@ def nullHeuristic(state, problem=None):
 
 def aStarSearch(problem, heuristic=nullHeuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
-    "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    
+    que_xy = Priority_Queue_Function(problem,f)
+    path = [] 
+    visited = [] 
+
+    if problem.isGoalState(problem.getStartState()):
+        return []
+
+    ele = (problem.getStartState(),[])
+    que_xy.push(ele,heuristic)
+
+    while(True):
+        if que_xy.isEmpty():
+            return []
+
+        xy,path = que_xy.pop() 
+
+        if xy in visited:
+            continue
+
+        visited.append(xy)
+
+        if problem.isGoalState(xy):
+            return path
+
+        successor = problem.getSuccessors(xy)
+
+        if successor:
+            for item in successor:
+                if item[0] not in visited:
+
+                    newPath = path + [item[1]] 
+                    ele = (item[0],newPath)
+                    que_xy.push(ele,heuristic)
+
+
+class Priority_Queue_Function(PriorityQueue):
+    """
+    Implements a priority queue with the same push/pop signature of the
+    Queue and the Stack classes. This is designed for drop-in replacement for
+    those two classes. The caller has to provide a priority function, which
+    extracts each item's priority.
+    """
+    def  __init__(self, problem, priorityFunction):
+        "priorityFunction (item) -> priority"
+        self.priorityFunction = priorityFunction    
+        PriorityQueue.__init__(self)        
+        self.problem = problem
+    def push(self, item, heuristic):
+        "Adds an item to the queue with priority from the priority function"
+        PriorityQueue.push(self, item, self.priorityFunction(self.problem,item,heuristic))
+
+# Calculate f(n) = g(n) + h(n) #
+def f(problem,state,heuristic):
+
+    return problem.getCostOfActions(state[1]) + heuristic(state[0],problem)
 
 
 # Abbreviations
