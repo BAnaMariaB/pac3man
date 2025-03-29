@@ -287,8 +287,9 @@ class CornersProblem(search.SearchProblem):
         self._expanded = 0 # DO NOT CHANGE; Number of search nodes expanded
         # Please add any code here which you would like to use
         # in initializing the problem
-
         self.initialState = [0,0,0,0]
+
+
 
     def getStartState(self):
         """
