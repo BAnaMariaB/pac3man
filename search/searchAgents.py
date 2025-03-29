@@ -37,6 +37,7 @@ Good luck and happy searching!
 from game import Directions
 from game import Agent
 from game import Actions
+from util import manhattanDistance
 import util
 import time
 import search
@@ -379,7 +380,19 @@ def cornersHeuristic(state, problem):
     walls = problem.walls # These are the walls of the maze, as a Grid (game.py)
 
     "*** YOUR CODE HERE ***"
-    return 0 # Default to trivial solution
+
+    if problem.isGoalState(state):
+        return 0
+    else:
+        distances_fgoals = [] 
+        
+        for index,item in enumerate(state[1]):
+            if item == 0: 
+                distances_fgoals.append(manhattanDistance(state[0],corners[index]))
+
+        return max(distances_fgoals)
+
+
     
 
 class AStarCornersAgent(SearchAgent):
@@ -472,9 +485,29 @@ def foodHeuristic(state, problem):
     Subsequent calls to this heuristic can access
     problem.heuristicInfo['wallCount']
     """
-    position, foodGrid = state
+    
     "*** YOUR CODE HERE ***"
-    return 0
+    position, foodGrid = state
+    food_List = foodGrid.asList()
+    problem.heuristicInfo['wallCount'] = problem.walls.count()
+
+    if problem.isGoalState(state):
+        return 0
+
+
+    dist = []
+    flag = 0
+
+    for item in food_List:
+        dist.append(mazeDistance(position,item,problem.startingGameState))
+
+        if flag == 4 and problem.heuristicInfo['wallCount'] > 20:
+            break
+
+        flag += 1
+
+    return max(dist)
+
 
 class ClosestDotSearchAgent(SearchAgent):
     "Search for all food using a sequence of searches"
