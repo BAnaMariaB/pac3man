@@ -289,8 +289,55 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         """
         "*** YOUR CODE HERE ***"
         
+        maxDepth = self.depth * gameState.getNumAgents()
+        return self.expectimax(gameState, "expect", maxDepth, 0)[0]
+
+    def expectimax(self, gameState, action, depth, agentIndex):
+      
+      if depth is 0 or gameState.isLose() or gameState.isWin():
+        return (action, self.evaluationFunction(gameState))
+
+      if agentIndex is 0:
+        return self.max_Value(gameState, action, depth, agentIndex)
+
+      else:
+        return self.exp_Value(gameState, action, depth, agentIndex)
+
+
+    def max_Value(self, gameState, action, depth, agentIndex):
+          
+      best_action = ("max", -(float('inf')))
         
-        util.raiseNotDefined()
+      for legal_action in gameState.getLegalActions(agentIndex):
+        succ_action = None
+        nextAgent = (agentIndex + 1) % gameState.getNumAgents()
+            
+        if depth != self.depth * gameState.getNumAgents():
+          succ_action = action
+            
+        else:
+          succ_action = legal_action
+            
+        succ_value = self.expectimax(gameState.generateSuccessor(agentIndex, legal_action), succ_action,depth - 1, nextAgent)
+        best_action = max(best_action, succ_value, key = lambda x:x[1])
+          
+          
+      return best_action
+
+
+    def exp_Value(self, gameState, action, depth, agentIndex):
+      avg_score = 0
+      legal_actions = gameState.getLegalActions(agentIndex)
+      prob = 1.0/len(legal_actions)
+        
+      for legalAction in legal_actions:
+        nextAgent = (agentIndex + 1) % gameState.getNumAgents()
+        bestAction = self.expectimax(gameState.generateSuccessor(agentIndex, legalAction),action, depth - 1, nextAgent)
+        avg_score += bestAction[1] * prob
+            
+      return (action, avg_score)
+        
+
 
 def betterEvaluationFunction(currentGameState):
     """
@@ -300,7 +347,41 @@ def betterEvaluationFunction(currentGameState):
       DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    
+    newPos = currentGameState.getPacmanPosition()
+    newFood = currentGameState.getFood().asList()
+    min_Food_List = float('inf')
+    
+    for food in newFood:
+      min_Food_List = min(min_Food_List, manhattanDistance(newPos, food))
+
+
+    ghost_distance = 0
+    
+    for ghost in currentGameState.getGhostPositions():
+      ghost_distance = manhattanDistance(newPos, ghost)
+        
+      if (ghost_distance < 2):
+        return -float('inf')
+
+    food_l = currentGameState.getNumFood()
+    caps_l = len(currentGameState.getCapsules())
+
+    food_l_mult = 950050
+    caps_l_mult = 10000
+    food_distance_mult = 950
+    additional_factors = 0
+    
+    if currentGameState.isLose():
+      additional_factors -= 50000
+    
+    elif currentGameState.isWin():
+      additional_factors += 50000
+
+    return 1.0/(food_l + 1) * food_l_mult + ghost_distance + \
+           1.0/(min_Food_List + 1) * food_distance_mult + \
+           1.0/(caps_l + 1) * caps_l_mult + additional_factors
+
 
 # Abbreviation
 better = betterEvaluationFunction
