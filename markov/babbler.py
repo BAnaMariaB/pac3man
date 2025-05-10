@@ -17,10 +17,14 @@ class Babbler:
         seed is the seed for a random number generation. If none given use the default.
         """
         self.n = n
-        if seed != None:
+        if seed is not None:
             random.seed(seed)
-        # TODO: your code goes here
-    
+        # transitions: map n-gram tuples to list of successor words
+        self._transitions = {}
+        # n-grams that start sentences
+        self._starters = []
+        # n-grams that end sentences
+        self._stoppers = []
     
     def add_sentence(self, sentence):
         """
@@ -28,16 +32,34 @@ class Babbler:
         The sentence is a string separated by spaces. Break it into
         words using split(). Convert each word to lowercase using lower().
         Then start processing n-grams and updating your states.
-        Remember to track starters (i.e. n-grams that being sentences),
+        Remember to track starters (i.e. n-grams that begin sentences),
         stoppers (i.e. n-grams that end a sentence), and that
-        any n-grams that stops a sentence should be followed by the
-        special symbol 'EOL' in the state transition table. 'EOL' is short
-        for 'end of line', and since it is capitalized and all of the
-        text from the book is lower-case, it will be unambiguous.
+        any n-grams that stop a sentence should be followed by the
+        special symbol 'EOL' in the state transition table.
+        'EOL' is short for 'end of line'.
         """
-        pass
+        if not sentence:
+            return
+        # normalize and split
+        words = [w.lower() for w in sentence.split()]
+        if len(words) < self.n:
+            return
 
-    
+        # record starter n-gram
+        starter = tuple(words[:self.n])
+        self._starters.append(starter)
+
+        # record transitions for all windows
+        for i in range(len(words) - self.n):
+            ngram = tuple(words[i:i + self.n])
+            successor = words[i + self.n]
+            self._transitions.setdefault(ngram, []).append(successor)
+
+        # record last n-gram -> EOL
+        last = tuple(words[-self.n:])
+        self._transitions.setdefault(last, []).append('EOL')
+        self._stoppers.append(last)
+
     def add_file(self, filename):
         """
         This method done for you. It just calls your add_sentence() method
@@ -47,104 +69,108 @@ class Babbler:
         for line in [line.rstrip().lower() for line in open(filename, errors='ignore').readlines()]:
             self.add_sentence(line)
     
-
     def get_starters(self):
         """
         Return a list of all of the n-grams that start any sentence we've seen.
         The resulting list may contain duplicates, because one n-gram may start
         multiple sentences.
         """
-        pass
+        #return list(self._starters)
+        return[" ".join(ngrams)for ngrams in self._starters]
     
-
     def get_stoppers(self):
         """
         Return a list of all the n-grams that stop any sentence we've seen.
         The resulting value may contain duplicates, because one n-gram may stop
         multiple sentences.
         """
-        pass
-
+        #return list(self._stoppers)
+        return[" ".join(ngrams)for ngrams in self._stoppers]
 
     def get_successors(self, ngram):
         """
         Return a list of words that may follow a given n-gram.
-        The resulting list may contain duplicates, because each
-        n-gram may be followed by different words. For example,
-        suppose an author has the following sentences:
-        'the dog dances quickly'
-        'the dog dances with the cat'
-        'the dog dances with me'
-
-        If n=3, then the n-gram 'the dog dances' is followed by
-        'quickly' one time, and 'with' two times.
-
+        The resulting list may contain duplicates.
         If the given state never occurs, return an empty list.
         """
-        pass
+        return list(self._transitions.get(ngram, []))
     
-
     def get_all_ngrams(self):
         """
         Return all the possible n-grams, or n-word sequences, that we have seen
         across all sentences.
-        
-        Probably a one-line method.
         """
-        pass
+        return [" ".join(ngrams) for ngrams in self._transitions.keys()]
 
+
+    def _parse_ngram(self, ngram):
+        """
+        Internal: accept a string 'w1 w2 ... wn' or tuple, return tuple of words.
+        """
+        if isinstance(ngram, str):
+            parts = ngram.split()
+            return tuple(parts)
+        return ngram
+
+    def get_successors(self, ngram):
+        """
+        Return a list of words that may follow a given n-gram (string or tuple),
+        with duplicates to reflect frequency. If unseen, returns [].
+        """
+        key = self._parse_ngram(ngram)
+        return list(self._transitions.get(key, []))
     
+
+
     def has_successor(self, ngram):
         """
         Return True if the given ngram has at least one possible successor
-        word, and False if it does not. This is another way of asking
-        if we have ever seen a given ngram, because ngrams with no successor
-        words must not have occurred in the training sentences.
+        word, and False if it does not.
         """
-        pass
-    
+        #return ngram in self._transitions and bool(self._transitions[ngram])
+        key = self._parse_ngram(ngram)
+        return bool(self._transitions.get(key))
+
     
     def get_random_successor(self, ngram):
         """
         Given an n-gram, randomly pick from the possible words
-        that could follow that n-gram. The randomness should take into
-        account how likely a word is to follow the given n-gram.
-        For example, if n=3 and we train on these three sentences:
-        'the dog dances quickly'
-        'the dog dances with the cat'
-        'the dog dances with me'
-        
-        and we call get_random_next_word() for the state 'the dog dances',
-        we should get 'quickly' about 1/3 of the time, and 'with' 2/3 of the time.
+        that could follow that n-gram, weighted by frequency.
         """
-        pass
+        succs = self._transitions.get(ngram)
+        if not succs:
+            return None
+        return random.choice(succs)
     
-
     def babble(self):
         """
-        Generate a random sentence using the following algorithm:
-        
-        1: Pick a starter ngram. This is the current ngram, and also 
-        the current sentence so far.
-        Suppose the starter ngram is 'a b c'
-        
+        Generate a random sentence using:
+        1: Pick a starter ngram.
         2: Choose a successor word based on the current ngram.
-        3: If the successor word is 'EOL', then return the current sentence.
-        4: Otherwise, add the word to the end of the sentence
-        (meaning sentence is now 'a b c d')
-        5: Also add the word to the end of the current ngram, and 
-        remove the first word from the current ngram.
-        This produces 'b c d' for our example.
-        6: Repeat step #2 until you generate 'EOL'.
+        3: If the successor word is 'EOL', return the sentence.
+        4: Otherwise, append and slide the window.
+        5: Repeat until 'EOL'.
         """
-        pass
-            
+        if not self._starters:
+            return ""
+
+        current = random.choice(self._starters)
+        sentence = list(current)
+
+        while True:
+            nxt = self.get_random_successor(current)
+            if nxt is None or nxt == 'EOL':
+                break
+            sentence.append(nxt)
+            current = tuple(sentence[-self.n:])
+
+        return " ".join(sentence)
+                
 
 def main(n=3, filename='tests/test1.txt', num_sentences=5):
     """
     Simple test driver.
     """
-    
     print(filename)
     babbler = Babbler(n)
     babbler.add_file(filename)
